@@ -2,6 +2,7 @@ from vectorformats.Formats.Format import Format
 import re, xml.dom.minidom as m
 from lxml import etree
 from xml.sax.saxutils import escape
+from cStringIO import StringIO
 
 class WFS(Format):
     """WFS-like GML writer."""
@@ -14,21 +15,15 @@ class WFS(Format):
                   'xsi' : 'http://www.w3.org/2001/XMLSchema-instance'}
     
     def encode(self, features, **kwargs):
-        results = ["""<?xml version="1.0" ?><wfs:FeatureCollection
-   xmlns:fs="http://featureserver.org/fs"
-   xmlns:wfs="http://www.opengis.net/wfs"
-   xmlns:gml="http://www.opengis.net/gml"
-   xmlns:ogc="http://www.opengis.net/ogc"
-   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-   xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengeospatial.net//wfs/1.0.0/WFS-basic.xsd">
-        """]
+        wfsstr = StringIO()
+        wfsstr.write('<?xml version="1.0" ?><wfs:FeatureCollection xmlns:fs="http://featureserver.org/fs" xmlns:wfs="http://www.opengis.net/wfs" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengeospatial.net//wfs/1.0.0/WFS-basic.xsd">')
         for feature in features:
-            results.append( self.encode_feature(feature))
-        results.append("""</wfs:FeatureCollection>""")
-        
-        return "\n".join(results)        
+            self.encode_feature(wfsstr, feature)
+        wfsstr.write("</wfs:FeatureCollection>")
+
+        return wfsstr.getvalue()
     
-    def encode_feature(self, feature):
+    def encode_feature(self, wfsstr, feature):
         layername = re.sub(r'\W', '_', self.layername)
         
         attr_fields = [] 
@@ -42,17 +37,18 @@ class WFS(Format):
             attr_fields.append( "<fs:%s>%s</fs:%s>" % (key, attr_value, key) )
             
         
-        xml = "<gml:featureMember gml:id=\"%s\"><fs:%s fid=\"%s\">" % (str(feature.id), layername, str(feature.id))
+        wfsstr.write("<gml:featureMember gml:id=\"%s\"><fs:%s fid=\"%s\">" % (str(feature.id), layername, str(feature.id)))
         
         if hasattr(feature, "geometry_attr"):
-            xml += "<fs:%s>%s</fs:%s>" % (feature.geometry_attr, self.geometry_to_gml(feature.geometry, feature.srs), feature.geometry_attr)
+            wfsstr.write("<fs:%s>" % feature.geometry_attr)
+            self.geometry_to_gml(wfsstr,feature.geometry, feature.srs)
+            wfsstr.write("</fs:%s>" % feature.geometry_attr)
         else:
-            xml += self.geometry_to_gml(feature.geometry, feature.srs)
+            self.geometry_to_gml(wfsstr, feature.geometry, feature.srs)
         
-        xml += "%s</fs:%s></gml:featureMember>" % ("\n".join(attr_fields), layername)  
-        return xml
-    
-    def geometry_to_gml(self, geometry, srs):
+        wfsstr.write("%s</fs:%s></gml:featureMember>" % ("\n".join(attr_fields), layername))
+
+    def geometry_to_gml(self, wfsstr, geometry, srs):
         """
         >>> w = WFS()
         >>> print w.geometry_to_gml({'type':'Point', 'coordinates':[1.0,2.0]})
@@ -60,20 +56,48 @@ class WFS(Format):
         >>> w.geometry_to_gml({'type':'LineString', 'coordinates':[[1.0,2.0],[2.0,1.0]]})
         '<gml:LineString><gml:coordinates>1.0,2.0 2.0,1.0</gml:coordinates></gml:LineString>'
         """
+
+        srs_code = srs
         
         if "EPSG" not in str(srs):
             srs = "EPSG:" + str(srs)
         
-        if geometry['type'] == "Point":
+        if "Point" == geometry['type']:
             coords = ",".join(map(str, geometry['coordinates']))
-            return "<gml:Point srsName=\"%s\"><gml:coordinates decimal=\".\" cs=\",\" ts=\" \">%s</gml:coordinates></gml:Point>" % (str(srs), coords)
-            #coords = " ".join(map(str, geometry['coordinates']))
-            #return "<gml:Point srsDimension=\"2\" srsName=\"%s\"><gml:pos>%s</gml:pos></gml:Point>" % (str(srs), coords)
-        elif geometry['type'] == "LineString":
+            wfsstr.write( "<gml:Point srsName=\"%s\"><gml:coordinates decimal=\".\" cs=\",\" ts=\" \">%s</gml:coordinates></gml:Point>" % (str(srs), coords) )
+
+
+        elif "MultiPoint" == geometry['type']:
+
+            wfsstr.write('<gml:MultiPoint srsName="http://www.opengis.net/gml/srs/epsg.xml#{_srs}">'.format(_srs=str(srs_code)))
+            member = '<gml:pointMember><gml:Point><gml:coordinates xmlns:gml="http://www.opengis.net/gml" decimal=\".\" cs=\",\" ts=\" \">{_coords}</gml:coordinates></gml:Point></gml:pointMember>'
+
+            for geom in geometry['coordinates']:
+                coords = ",".join(map(str, geom))
+                wfsstr.write(member.format(_coords=coords))
+
+            wfsstr.write('</gml:MultiPoint>')
+
+
+        elif "LineString" == geometry['type']:
             coords = " ".join(",".join(map(str, coord)) for coord in geometry['coordinates'])
-            return "<gml:LineString><gml:coordinates decimal=\".\" cs=\",\" ts=\" \" srsName=\"%s\">%s</gml:coordinates></gml:LineString>" % (str(srs), coords)
-            #return "<gml:curveProperty><gml:LineString srsDimension=\"2\" srsName=\"%s\"><gml:coordinates>%s</gml:coordinates></gml:LineString></gml:curveProperty>" % (str(srs), coords)
-        elif geometry['type'] == "Polygon":
+            tstr = "<gml:LineString><gml:coordinates decimal=\".\" cs=\",\" ts=\" \" srsName=\"%s\">%s</gml:coordinates></gml:LineString>" % (str(srs), coords)
+            wfsstr.write(tstr)
+
+
+        elif "MultiLineString" == geometry['type']:
+            wfsstr.write('<gml:MultiLineString srsName="http://www.opengis.net/gml/srs/epsg.xml#{_srs}">'.format(_srs=str(srs_code)))
+            member = '<gml:lineStringMember><gml:LineString><gml:coordinates xmlns:gml="http://www.opengis.net/gml" decimal=\".\" cs=\",\" ts=\" \">{_coords}</gml:coordinates></gml:LineString></gml:lineStringMember>'
+
+            for geom in geometry['coordinates']:
+                coords = " ".join(map(lambda x: ",".join(map(str, x)), geom))
+                wfsstr.write(member.format(_coords=coords))
+
+            wfsstr.write('</gml:MultiLineString>')
+
+
+
+        elif "Polygon" == geometry['type']:
             coords = " ".join(map(lambda x: ",".join(map(str, x)), geometry['coordinates'][0]))
             #out = """
             #    <gml:exterior>
@@ -108,10 +132,22 @@ class WFS(Format):
                     </gml:interior>
                 """ % coords) 
             
-            return """
+            wfsstr.write("""
                             <gml:Polygon srsName="%s">
                                 %s %s
-                            </gml:Polygon>""" % (srs, out, "".join(inner_rings))
+                            </gml:Polygon>""" % (srs, out, "".join(inner_rings)))
+
+        elif "MultiPolygon" == geometry['type']:
+            wfsstr.write('<gml:MultiPolygon srsName="http://www.opengis.net/gml/srs/epsg.xml#{_srs}">'.format(_srs=str(srs_code)))
+            member = '<gml:polygonMember><gml:Polygon><gml:outerBoundaryIs><gml:LinearRing><gml:coordinates xmlns:gml="http://www.opengis.net/gml" decimal=\".\" cs=\",\" ts=\" \">{_coords}</gml:coordinates></gml:LinearRing></gml:outerBoundaryIs></gml:Polygon></gml:polygonMember>'
+
+            for geom in geometry['coordinates']:
+                coords = " ".join(map(lambda x: ",".join(map(str, x)), geom))
+                wfsstr.write(member.format(_coords=coords))
+
+            wfsstr.write('</gml:MultiPolygon>')
+
+
         else:
             raise Exception("Could not convert geometry of type %s." % geometry['type'])
     
