@@ -16,7 +16,7 @@ from FeatureServer.WebFeatureService.Response.DeleteResult import DeleteResult
 from FeatureServer.WebFeatureService.Response.ReplaceResult import ReplaceResult
 
 
-from pyspatialite import dbapi2 as db
+import sqlite3 as db
 
 import datetime
 
@@ -91,6 +91,10 @@ class SpatialLite (DataSource):
         if not os.path.exists(self.file):
             raise ConnectionException(**{'layer':self.name,'locator':'SpatialLite'})
         self._connection = db.connect(self.file, check_same_thread = False)
+        self._connection.enable_load_extension(True);
+        cmd = "select load_extension('mod_spatialite')"
+        cur = self._connection.cursor()
+        cur.execute(cmd)
     
     def close(self):
         self._connection.close()
