@@ -35,6 +35,8 @@ class DataSource (object):
         pass
     def getBBOX(self):
         return '0 0 0 0'
+    def getLLBBOX(self):
+        return '0 0 0 0'
     def getAttributeDescription(self, name): pass
 
 class Lock (object):

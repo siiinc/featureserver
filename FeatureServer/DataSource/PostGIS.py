@@ -382,3 +382,29 @@ class PostGIS (DataSource):
                         length = ''
         
         return (type, length)
+
+    def getBBOX(self):
+        sql = "SELECT ST_XMin(Box2D({_the_geom})), ST_YMin(Box2D({_the_geom})), ST_XMax(Box2D({_the_geom})), ST_YMax(Box2D({_the_geom})) FROM {_table}".format(_the_geom=self.geom_col, _table=self.table)
+        self.begin()
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        result = [cursor.fetchone()]
+        try:
+            bbox = '{_minx} {_miny} {_maxx} {_maxy}'.format(_minx=str(result[0][0]), _miny=str(result[0][1]),_maxx=str(result[0][2]), _maxy=str(result[0][3]))
+        except:
+            bbox = '0 0 0 0'
+
+        return bbox
+
+    def getLLBBOX(self):
+        sql = "SELECT ST_XMin(Box2D(ST_Transform ({_the_geom}, 4326))), ST_YMin(Box2D(ST_Transform ({_the_geom}, 4326))), ST_XMax(Box2D(ST_Transform ({_the_geom}, 4326))), ST_YMax(Box2D(ST_Transform ({_the_geom}, 4326))) FROM {_table}".format(_the_geom=self.geom_col, _table=self.table)
+        self.begin()
+        cursor = self.db.cursor()
+        cursor.execute(sql)
+        result = [cursor.fetchone()]
+        try:
+            bbox = '{_minx} {_miny} {_maxx} {_maxy}'.format(_minx=str(result[0][0]), _miny=str(result[0][1]),_maxx=str(result[0][2]), _maxy=str(result[0][3]))
+        except:
+            bbox = '0 0 0 0'
+
+        return bbox
