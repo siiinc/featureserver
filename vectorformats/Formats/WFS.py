@@ -266,25 +266,25 @@ class WFS(Format):
         if len(elements) > 0:
             for element in elements:
                 for http in element:
-                    http.set('onlineResource', self.host + '?')
+                    http.set('onlineResource', self.host + '?' + 'Request=GetCapabilities')
 
         elements = root.xpath("wfs:Capability/wfs:Request/wfs:DescribeFeatureType/wfs:DCPType/wfs:HTTP", namespaces = self.namespaces)
         if len(elements) > 0:
             for element in elements:
                 for http in element:
-                    http.set('onlineResource', self.host + '?')
+                    http.set('onlineResource', self.host + '?' + 'Request=DescribeFeatureType')
 
         elements = root.xpath("wfs:Capability/wfs:Request/wfs:GetFeature/wfs:DCPType/wfs:HTTP", namespaces = self.namespaces)
         if len(elements) > 0:
             for element in elements:
                 for http in element:
-                    http.set('onlineResource', self.host + '?')
+                    http.set('onlineResource', self.host + '?' + 'Request=GetFeature')
 
         elements = root.xpath("wfs:Capability/wfs:Request/wfs:Transaction/wfs:DCPType/wfs:HTTP", namespaces = self.namespaces)
         if len(elements) > 0:
             for element in elements:
                 for http in element:
-                    http.set('onlineResource', self.host + '?')
+                    http.set('onlineResource', self.host + '?' + 'Request=Transaction')
 
 
         layers = self.getlayers()
@@ -297,30 +297,30 @@ class WFS(Format):
 
     def getlayers(self):
         ''' '''
-        featureList = etree.Element('FeatureTypeList')
-        operations = etree.Element('Operations')
-        operations.append(etree.Element('Query'))
+        featureList = etree.Element('{http://www.opengis.net/wfs}FeatureTypeList')
+        operations = etree.Element('{http://www.opengis.net/wfs}Operations')
+        operations.append(etree.Element('{http://www.opengis.net/wfs}Query'))
         featureList.append(operations)
 
         for layer in self.layers:
-            type = etree.Element('FeatureType')
-            name = etree.Element('Name')
+            type = etree.Element('{http://www.opengis.net/wfs}FeatureType')
+            name = etree.Element('{http://www.opengis.net/wfs}Name')
             name.text = layer
             type.append(name)
 
-            title = etree.Element('Title')
+            title = etree.Element('{http://www.opengis.net/wfs}Title')
             if hasattr(self.datasources[layer], 'title'):
                 title.text = self.datasources[layer].title
             elif hasattr(self.datasources[layer], 'name'):
                 title.text = self.datasources[layer].name
             type.append(title)
 
-            abstract = etree.Element('Abstract')
+            abstract = etree.Element('{http://www.opengis.net/wfs}Abstract')
             if hasattr(self.datasources[layer], 'abstract'):
                 abstract.text = self.datasources[layer].abstract
             type.append(abstract)
 
-            keywords = etree.Element('Keywords')
+            keywords = etree.Element('{http://www.opengis.net/wfs}Keywords')
             if hasattr(self.datasources[layer], 'keywords'):
                 keywords.text = self.datasources[layer].abstract
             else:
@@ -328,7 +328,7 @@ class WFS(Format):
             type.append(abstract)
 
 
-            srs = etree.Element('SRS')
+            srs = etree.Element('{http://www.opengis.net/wfs}SRS')
             if hasattr(self.datasources[layer], 'srid_out') and self.datasources[layer].srid_out is not None:
                 srs.text = 'EPSG:' + str(self.datasources[layer].srid_out)
             else:
@@ -475,7 +475,7 @@ class WFS(Format):
             latlong = datasource.getLLBBOX()
         latlongArray = latlong.split(' ')
 
-        return etree.Element('LatLongBoundingBox',
+        return etree.Element('{http://www.opengis.net/wfs}LatLongBoundingBox',
                              attrib={'minx':latlongArray[0],
                                      'miny':latlongArray[1],
                                      'maxx':latlongArray[2],

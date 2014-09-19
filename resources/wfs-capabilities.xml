@@ -1,63 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<WFS_Capabilities
-	version="1.0.0"
-	xmlns="http://www.opengis.net/wfs"
-	xmlns:ogc="http://www.opengis.net/ogc"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengeospatial.net/wfs/1.0.0/WFS-capabilities.xsd">
+<wfs:WFS_Capabilities version="1.0.0" updateSequence="0" xmlns="http://www.opengis.net/ows"
+   xmlns:wfs="http://www.opengis.net/wfs"
+   xmlns:ogc="http://www.opengis.net/ogc"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.0.0/WFS-capabilities.xsd">
 
-	<Service>
-		<Name>WFS Server</Name>
-		<Title>Web Feature Service Server</Title>
-		<Abstract>Supports WFS, GML, KML, etc.</Abstract>
-        <Keywords>WFS, GeoJSON, GeoRSS, featureserver.org</Keywords>
-		<OnlineResource></OnlineResource>
-	</Service>
+	<wfs:Service>
+		<wfs:Name>WFS Server</wfs:Name>
+		<wfs:Title>Web Feature Service Server</wfs:Title>
+		<wfs:Abstract>Supports WFS, GML, KML, etc.</wfs:Abstract>
+        <wfs:Keywords>WFS, GeoJSON, GeoRSS, featureserver.org</wfs:Keywords>
+		<wfs:OnlineResource></wfs:OnlineResource>
+	</wfs:Service>
 
-	<Capability>
-		<Request>
-			<GetCapabilities>
-				<DCPType>
-					<HTTP>
-						<Get onlineResource="" />
-					</HTTP>
-				</DCPType>
-			</GetCapabilities>
-			<DescribeFeatureType>
-				<SchemaDescriptionLanguage>
-					<XMLSCHEMA />
-				</SchemaDescriptionLanguage>
-				<DCPType>
-					<HTTP>
-						<Get onlineResource="" />
-					</HTTP>
-				</DCPType>
-			</DescribeFeatureType>
-			<GetFeature>
-				<ResultFormat>
-					<GML2 />
-				</ResultFormat>
-				<DCPType>
-					<HTTP>
-						<Get onlineResource="" />
-					</HTTP>
-				</DCPType>
-			</GetFeature>
-			<Transaction>
-				<ResultFormat>
-					<GML2 />
-				</ResultFormat>
-				<DCPType>
-					<HTTP>
-						<Post onlineResource="" />
-					</HTTP>
-				</DCPType>
-			</Transaction>
-		</Request>
-	</Capability>
+	<wfs:Capability>
+		<wfs:Request>
+			<wfs:GetCapabilities>
+				<wfs:DCPType>
+					<wfs:HTTP>
+						<wfs:Get onlineResource="" />
+					</wfs:HTTP>
+				</wfs:DCPType>
+			</wfs:GetCapabilities>
+			<wfs:DescribeFeatureType>
+				<wfs:SchemaDescriptionLanguage>
+					<wfs:XMLSCHEMA />
+				</wfs:SchemaDescriptionLanguage>
+				<wfs:DCPType>
+					<wfs:HTTP>
+						<wfs:Get onlineResource="" />
+					</wfs:HTTP>
+				</wfs:DCPType>
+			</wfs:DescribeFeatureType>
+			<wfs:GetFeature>
+				<wfs:ResultFormat>
+					<wfs:GML2 />
+				</wfs:ResultFormat>
+				<wfs:DCPType>
+					<wfs:HTTP>
+						<wfs:Get onlineResource="" />
+					</wfs:HTTP>
+				</wfs:DCPType>
+			</wfs:GetFeature>
+			<wfs:Transaction>
+				<wfs:DCPType>
+					<wfs:HTTP>
+						<wfs:Post onlineResource="" />
+					</wfs:HTTP>
+				</wfs:DCPType>
+			</wfs:Transaction>
+		</wfs:Request>
+	</wfs:Capability>
 
-	<FeatureTypeList>
-	</FeatureTypeList>
+	<wfs:FeatureTypeList>
+	</wfs:FeatureTypeList>
 
 	<ogc:Filter_Capabilities>
         <ogc:Spatial_Capabilities>
@@ -84,4 +81,4 @@
         </ogc:Scalar_Capabilities>
     </ogc:Filter_Capabilities>
 
-</WFS_Capabilities>
+</wfs:WFS_Capabilities>
