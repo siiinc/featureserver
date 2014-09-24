@@ -9,6 +9,7 @@ from FeatureServer.WebFeatureService.FilterEncoding.FilterEncoding import Filter
 from FeatureServer.WebFeatureService.Transaction.Transaction import Transaction
 from FeatureServer.WebFeatureService.FilterEncoding.Select import Select
 from copy import deepcopy
+import json
 
 class WFSRequest(object):
     dom     = None
@@ -57,8 +58,13 @@ class WFSRequest(object):
         
         query = self.dom.xpath("//*[local-name() = 'Query']")
         if len(query) > 0:
-            #query - return a dummy select object
-            return [Select(etree.tostring(deepcopy(query[0]).getchildren()[0]))]
+            try:
+                children = query[0].getchildren()
+                if len(children) > 0:
+                    return [Select(etree.tostring(children[0]))]
+                return None
+            except Exception as e:
+                pass
         else:
             # returning all transaction objects in a array 
             self.transaction = Transaction()

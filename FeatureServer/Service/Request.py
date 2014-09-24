@@ -155,9 +155,10 @@ class Request (object):
     
     def get_layer(self, path_info, params = {}):
         """Return layer based on path, or raise a NoLayerException."""
-        if params.has_key("typename"):
-            self.datasources = params["typename"].split(",")
-            return
+        for key, value in params.items():
+            if key.lower() == "typename":
+                self.datasources = value.split(",")
+                return
         
         path = path_info.split("/")
         if len(path) > 1 and path_info != '/':

@@ -166,9 +166,11 @@ class Server (object):
         if not found and not params.has_key("typename") and post_data:
             try:
                 dom = etree.XML(post_data)
-                for key, value in cgimod.parse_qsl(post_data, keep_blank_values=True):
-                    if key.lower() == 'typename':
-                        params['typename'] = value
+                for element in dom.iter("*"):
+                    for name, value in sorted(element.items()):
+                        if name.lower() == 'typename':
+                            params['typename'] = value
+                            break
             except etree.ParseError: pass
 
         if not found and params.has_key("service"):
@@ -229,6 +231,11 @@ class Server (object):
         
             try:
                 datasource.begin()
+                if hasattr(datasource, 'nativebbox'):
+                    datasource.nativebbox = datasource.getBBOX()
+                if hasattr(datasource, 'llbbox'):
+                    datasource.llbbox = datasource.getLLBBOX()
+
 
                 if len(request.actions) > 0 and hasattr(request.actions[0], 'request') and request.actions[0].request is not None:
                     if request.actions[0].request.lower() == "getfeature":

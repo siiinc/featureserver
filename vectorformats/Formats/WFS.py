@@ -3,6 +3,8 @@ import re, xml.dom.minidom as m
 from lxml import etree
 from xml.sax.saxutils import escape
 from cStringIO import StringIO
+import urllib
+import cgi
 
 class WFS(Format):
     """WFS-like GML writer."""
@@ -16,7 +18,29 @@ class WFS(Format):
 
     def encode(self, features, **kwargs):
         wfsstr = StringIO()
-        wfsstr.write('<?xml version="1.0" ?><wfs:FeatureCollection xmlns:fs="http://featureserver.org/fs" xmlns:wfs="http://www.opengis.net/wfs" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengeospatial.net//wfs/1.0.0/WFS-basic.xsd">')
+        host = "{_host}/?service=WFS&version=1.0.0&request=DescribeFeatureType&typeName={_layername}".format(
+            _host=kwargs.get("host", "http://localhost"),_layername=self.layername)
+        host = cgi.escape(host)
+
+        head = '<?xml version="1.0" ?><wfs:FeatureCollection xmlns:fs="http://featureserver.org/fs" xmlns:wfs="http://www.opengis.net/wfs" xmlns:gml="http://www.opengis.net/gml" xmlns:ogc="http://www.opengis.net/ogc" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="{_fs} {_fsdec} http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.0.0/WFS-basic.xsd">'.format(_fs=self.namespaces["fs"], _fsdec=host)
+        wfsstr.write(head)
+
+        #write bounded by
+        srid = kwargs.get("srid", "EPSG:4326")
+        if kwargs.get("bbox", None):
+            coordarray = kwargs.get("bbox").split(' ')
+        else:
+             coordarray = [-180, -90, 180, 90]
+
+        bounded = """<gml:boundedBy><gml:Box srsName="{_srid}">
+      		<gml:coordinates>
+      			{_coord}
+      		</gml:coordinates>
+      	</gml:Box></gml:boundedBy>  """.format(_srid=srid, _coord=",".join(coordarray))
+
+        #bounded = '<gml:boundedBy><gml:Envelope srsName="{_srid}"><gml:lowerCorner>{0} {1}</gml:lowerCorner><gml:upperCorner>{2} {3}</gml:upperCorner></gml:Envelope></gml:boundedBy>'.format(_srid=srid, *coordarray)
+        wfsstr.write(bounded)
+
         for feature in features:
             self.encode_feature(wfsstr, feature)
         wfsstr.write("</wfs:FeatureCollection>")
@@ -260,7 +284,7 @@ class WFS(Format):
         return result
 
     def getcapabilities(self):
-        tree = etree.parse("resources/wfs-capabilities.xml")
+        tree = etree.parse("resources/wfs-capabilities-v100.xml")
         root = tree.getroot()
         elements = root.xpath("wfs:Capability/wfs:Request/wfs:GetCapabilities/wfs:DCPType/wfs:HTTP", namespaces = self.namespaces)
         if len(elements) > 0:
@@ -350,7 +374,7 @@ class WFS(Format):
         return featureList
 
     def describefeaturetype(self):
-        tree = etree.parse("resources/wfs-featuretype.xsd")
+        tree = etree.parse("resources/wfs-featuretype-v100.xsd")
         root = tree.getroot()
 
         if len(self.layers) == 1:
@@ -385,20 +409,13 @@ class WFS(Format):
         for attribut_col in datasource.attribute_cols.split(','):
             type, length = datasource.getAttributeDescription(attribut_col)
 
-            maxLength = etree.Element('maxLength', attrib={'value':str(length)})
-            restriction = etree.Element('restriction', attrib={'base' : type})
-            restriction.append(maxLength)
-            simpleType = etree.Element('simpleType')
-            simpleType.append(restriction)
-
             attrib_name = attribut_col
             if hasattr(datasource, "hstore"):
                 if datasource.hstore:
                     attrib_name = self.getFormatedAttributName(attrib_name)
 
-            element = etree.Element('element', attrib={'name' : str(attrib_name),
-                                                       'minOccurs' : '0'})
-            element.append(simpleType)
+            element = etree.Element('element', attrib={'name' : str(attrib_name),'maxOccurs' : '1',
+                                                       'minOccurs' : '0', 'type' : 'string'})
 
             sequence.append(element)
 
@@ -427,24 +444,40 @@ class WFS(Format):
         if hasattr(datasource, 'geometry_type'):
             properties = datasource.geometry_type.split(',')
         else:
-            properties = ['Point', 'Line', 'Polygon']
+            properties = ['Point', 'lineString', 'Polygon', 'multiPoint', 'multiLineString', 'multiPolygon']
         for property in properties:
             if property == 'Point':
                 element = etree.Element('element', attrib={'name' : datasource.geom_col,
                                                            'type' : 'gml:PointPropertyType',
-                                                           'minOccurs' : '0'})
+                                                           'minOccurs' : '0', 'maxOccurs' : '1'})
                 sequence.append(element)
-            elif property == 'Line':
+            elif property == 'lineString':
                 element = etree.Element('element', attrib={'name' : datasource.geom_col,
                                                            'type' : 'gml:LineStringPropertyType',
                                                            #'ref' : 'gml:curveProperty',
-                                                           'minOccurs' : '0'})
+                                                           'minOccurs' : '0', 'maxOccurs' : '1'})
                 sequence.append(element)
             elif property == 'Polygon':
                 element = etree.Element('element', attrib={'name' : datasource.geom_col,
                                                            'type' : 'gml:PolygonPropertyType',
                                                            #'substitutionGroup' : 'gml:_Surface',
-                                                           'minOccurs' : '0'})
+                                                           'minOccurs' : '0', 'maxOccurs' : '1'})
+            elif property == 'multiPoint':
+                element = etree.Element('element', attrib={'name' : datasource.geom_col,
+                                                           'type' : 'gml:MultiPointPropertyType',
+                                                           'minOccurs' : '0', 'maxOccurs' : '1'})
+                sequence.append(element)
+            elif property == 'multiLineString':
+                element = etree.Element('element', attrib={'name' : datasource.geom_col,
+                                                           'type' : 'gml:MultiLineStringPropertyType',
+                                                           #'ref' : 'gml:curveProperty',
+                                                           'minOccurs' : '0', 'maxOccurs' : '1'})
+                sequence.append(element)
+            elif property == 'multiPolygon':
+                element = etree.Element('element', attrib={'name' : datasource.geom_col,
+                                                           'type' : 'gml:MultiPolygonPropertyType',
+                                                           #'substitutionGroup' : 'gml:_Surface',
+                                                           'minOccurs' : '0', 'maxOccurs' : '1'})
                 sequence.append(element)
 
 
@@ -456,8 +489,8 @@ class WFS(Format):
         return root
 
     def getBBOX(self, datasource):
-        if hasattr(datasource, 'bbox'):
-            coordstr = datasource.bbox
+        if hasattr(datasource, 'nativebbox'):
+            coordstr = datasource.nativebbox
         else:
             coordstr = datasource.getBBOX()
         coordstr = coordstr.split(' ')
@@ -469,8 +502,8 @@ class WFS(Format):
                                      'maxy':coordstr[3]})
 
     def getLLBBOX(self, datasource):
-        if hasattr(datasource, 'LatLongBoundingBox '):
-            latlong = datasource.LatLongBoundingBox
+        if hasattr(datasource, 'llbbox '):
+            latlong = datasource.llbbox
         else:
             latlong = datasource.getLLBBOX()
         latlongArray = latlong.split(' ')

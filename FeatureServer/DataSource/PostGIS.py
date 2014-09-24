@@ -56,6 +56,8 @@ class PostGIS (DataSource):
         self.dsn            = args["dsn"]
         self.writable       = writable
         self.attribute_cols = attribute_cols
+        self.nativebbox     = ''
+        self.llbbox         = ''
         
         self.fe_attributes = True
         if fe_attributes.lower() == 'false':
@@ -390,11 +392,11 @@ class PostGIS (DataSource):
         cursor.execute(sql)
         result = [cursor.fetchone()]
         try:
-            bbox = '{_minx} {_miny} {_maxx} {_maxy}'.format(_minx=str(result[0][0]), _miny=str(result[0][1]),_maxx=str(result[0][2]), _maxy=str(result[0][3]))
+            self.nativebbox = '{_minx} {_miny} {_maxx} {_maxy}'.format(_minx=str(result[0][0]), _miny=str(result[0][1]),_maxx=str(result[0][2]), _maxy=str(result[0][3]))
         except:
-            bbox = '0 0 0 0'
+            return '0 0 0 0'
 
-        return bbox
+        return self.nativebbox
 
     def getLLBBOX(self):
         sql = "SELECT ST_XMin(Box2D(ST_Transform ({_the_geom}, 4326))), ST_YMin(Box2D(ST_Transform ({_the_geom}, 4326))), ST_XMax(Box2D(ST_Transform ({_the_geom}, 4326))), ST_YMax(Box2D(ST_Transform ({_the_geom}, 4326))) FROM {_table}".format(_the_geom=self.geom_col, _table=self.table)
@@ -403,8 +405,8 @@ class PostGIS (DataSource):
         cursor.execute(sql)
         result = [cursor.fetchone()]
         try:
-            bbox = '{_minx} {_miny} {_maxx} {_maxy}'.format(_minx=str(result[0][0]), _miny=str(result[0][1]),_maxx=str(result[0][2]), _maxy=str(result[0][3]))
+            self.llbbox = '{_minx} {_miny} {_maxx} {_maxy}'.format(_minx=str(result[0][0]), _miny=str(result[0][1]),_maxx=str(result[0][2]), _maxy=str(result[0][3]))
         except:
-            bbox = '0 0 0 0'
+            return '0 0 0 0'
 
-        return bbox
+        return self.llbbox

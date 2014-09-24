@@ -17,8 +17,13 @@ class WFS(Request):
         
         if isinstance(results, TransactionResponse):
             return ("text/xml", wfs.encode_transaction(results), None, 'utf-8')
-        
-        output = wfs.encode(results)
+        srid = "EPSG:4326"
+        if hasattr(self.service.datasources[self.datasources[0]], 'srid'):
+            srid = self.service.datasources[self.datasources[0]].srid
+        bbox = '0 0 0 0'
+        if hasattr(self.service.datasources[self.datasources[0]], 'nativebbox'):
+            bbox = self.service.datasources[self.datasources[0]].nativebbox
+        output = wfs.encode(results,srid="EPSG:{_code}".format(_code=srid), bbox=bbox, host=self.host)
         return ("text/xml", output, None, 'utf-8')
     
     def encode_exception_report(self, exceptionReport):
@@ -53,7 +58,11 @@ class WFS(Request):
             raise
 
     def getcapabilities(self, version):
-        wfs = vectorformats.Formats.WFS.WFS(layers=self.datasources, datasources=self.service.datasources, host=self.host)
+        if hasattr(self, 'workspace'):
+            host = "{_host}/{_ws}".format(_host=self.host, _ws=self.workspace)
+        else:
+            host = self.host
+        wfs = vectorformats.Formats.WFS.WFS(layers=self.datasources, datasources=self.service.datasources, host=host)
         result = wfs.getcapabilities()
         return ("text/xml", result)
     
